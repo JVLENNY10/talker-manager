@@ -79,3 +79,123 @@ app.post('/login', (req, res) => {
   checkPassword(password, res);
   res.status(200).json({ token: generateToken() });
 });
+
+// Requisito 4
+
+// Eduardo Miyazaki (T16-A) me lembrou do JSON.stringify para passar o array para string antes de reescrever o arquivo talker.json
+
+const checkToken = (req, res, next) => {
+  const { authorization } = req.headers;
+
+  if (!authorization) {
+    return res.status(401).json({ message: 'Token não encontrado' });
+  } if (authorization.length !== 16) {
+    return res.status(401).json({ message: 'Token inválido' });
+  }
+
+  next();
+};
+
+const checkName = (req, res, next) => {
+  const { name } = req.body;
+
+  if (!name || name === '') {
+    return res.status(400).json({ message: 'O campo "name" é obrigatório' });
+  } if (name.length < 3) {
+    return res.status(400).json({ message: 'O "name" deve ter pelo menos 3 caracteres' });
+  }
+
+  next();
+};
+
+const checkAge = (req, res, next) => {
+  const { age } = req.body;
+
+  if (!age || age === '') {
+    return res.status(400).json({ message: 'O campo "age" é obrigatório' });
+  } if (age < 18) {
+    return res.status(400).json({ message: 'A pessoa palestrante deve ser maior de idade' });
+  }
+
+  next();
+};
+
+const checkDateValues = (dateValues) => (
+  dateValues.every((date, index) => {
+    if (index < 2 && date.length === 2) return true;
+    if (date.length === 4) return true;
+    return false;
+  })
+);
+
+const checkDate = (req, res, next) => {
+  const { talk: { watchedAt } } = req.body;
+
+  if (!watchedAt || watchedAt === '') {
+    return res.status(400).json({
+      message: 'O campo "talk" é obrigatório e "watchedAt" e "rate" não podem ser vazios',
+    });
+  }
+
+  const dateValues = watchedAt.split('/');
+  const dateBarsLength = watchedAt.split('/').length - 1;
+
+  if (dateBarsLength !== 2 || !checkDateValues(dateValues)) {
+    return res.status(400).json({ message: 'O campo "watchedAt" deve ter o formato "dd/mm/aaaa"' });
+  }
+
+  next();
+};
+
+const checkRate = (req, res, next) => {
+  const { talk: { rate } } = req.body;
+
+  if (!rate || rate === '') {
+    return res.status(400).json({
+      message: 'O campo "talk" é obrigatório e "watchedAt" e "rate" não podem ser vazios',
+    });
+  } if (rate < 1 || rate > 5) {
+    return res.status(400).json({ message: 'O campo "rate" deve ser um inteiro de 1 à 5' });
+  }
+
+  next();
+};
+
+const checkTalk = (req, res, next) => {
+  const { talk } = req.body;
+
+  if (!talk || talk === '') {
+    return res.status(400).json({
+      message: 'O campo "talk" é obrigatório e "watchedAt" e "rate" não podem ser vazios',
+    });
+  }
+
+  next();
+};
+
+app.post('/talker',
+  checkToken,
+  checkName,
+  checkAge,
+  checkTalk,
+  checkDate,
+  checkRate,
+  async (req, res) => {
+    const { name, age, talk: { watchedAt, rate } } = req.body;
+    const talkers = await fs.readFile('./talker.json', 'utf8')
+      .then((response) => JSON.parse(response));
+
+    const newTalker = {
+      id: talkers.length + 1,
+      name,
+      age,
+      talk: {
+        watchedAt,
+        rate,
+      },
+    };
+
+    talkers.push(newTalker);
+    await fs.writeFile('./talker.json', JSON.stringify(talkers));
+    return res.status(201).json(newTalker);
+  });
