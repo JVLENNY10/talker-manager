@@ -24,6 +24,33 @@ app.get('/talker', (_req, res) => {
     .then((response) => res.status(200).json(JSON.parse(response)));
 });
 
+const checkToken = (req, res, next) => {
+  const { authorization } = req.headers;
+
+  if (!authorization) {
+    return res.status(401).json({ message: 'Token não encontrado' });
+  } if (authorization.length !== 16) {
+    return res.status(401).json({ message: 'Token inválido' });
+  }
+
+  next();
+};
+
+// Requisito 7
+app.get('/talker/search', checkToken, async (req, res) => {
+  await fs.readFile(talkerJson, 'utf8')
+    .then((response) => {
+      const { q } = req.query;
+      const talkers = JSON.parse(response);
+      const checkSearchTerm = talkers.filter((talker) => talker.name.includes(q));
+
+      // if (!q || q === '') return res.status(200).json(talkers);
+      // if (!checkSearchTerm) return res.status(200).json([]);
+
+      return res.status(200).json(checkSearchTerm);
+    });
+});
+
 // Requisito 2
 app.get('/talker/:id', (req, res) => {
   fs.readFile(talkerJson, 'utf8')
@@ -85,18 +112,6 @@ app.post('/login', (req, res) => {
 
 // Eduardo Miyazaki (T16-A) me lembrou do JSON.stringify para passar o array para string antes de reescrever o arquivo talker.json
 
-const checkToken = (req, res, next) => {
-  const { authorization } = req.headers;
-
-  if (!authorization) {
-    return res.status(401).json({ message: 'Token não encontrado' });
-  } if (authorization.length !== 16) {
-    return res.status(401).json({ message: 'Token inválido' });
-  }
-
-  next();
-};
-
 const checkName = (req, res, next) => {
   const { name } = req.body;
 
@@ -157,7 +172,7 @@ const checkRate = (req, res, next) => {
     return res.status(400).json({
       message: 'O campo "talk" é obrigatório e "watchedAt" e "rate" não podem ser vazios',
     });
-  } 
+  }
 
   next();
 };
@@ -215,7 +230,7 @@ app.put('/talker/:id',
     const talkers = await fs.readFile(talkerJson, 'utf8')
       .then((response) => JSON.parse(response));
 
-    const newTalker = { id, name, age, talk: { watchedAt, rate } };
+    const newTalker = { id: Number(id), name, age, talk: { watchedAt, rate } };
     talkers.splice(id - 1, 1, newTalker);
 
     await fs.writeFile(talkerJson, JSON.stringify(talkers));
@@ -224,11 +239,11 @@ app.put('/talker/:id',
 
 // Requisito 6
 app.delete('/talker/:id', checkToken, async (req, res) => {
-    const { id } = req.params;
-    const talkers = await fs.readFile(talkerJson, 'utf8')
-      .then((response) => JSON.parse(response));
+  const { id } = req.params;
+  const talkers = await fs.readFile(talkerJson, 'utf8')
+    .then((response) => JSON.parse(response));
 
-    talkers.splice(id - 1, 1);
-    await fs.writeFile(talkerJson, JSON.stringify(talkers));
-    return res.status(204).end();
-  });
+  talkers.splice(id - 1, 1);
+  await fs.writeFile(talkerJson, JSON.stringify(talkers));
+  return res.status(204).end();
+});
