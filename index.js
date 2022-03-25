@@ -5,6 +5,7 @@ const fs = require('fs').promises;
 const app = express();
 app.use(bodyParser.json());
 
+const talkerJson = './talker.json';
 const HTTP_OK_STATUS = 200;
 const PORT = '3000';
 
@@ -19,13 +20,13 @@ app.listen(PORT, () => {
 
 // Requisito 1
 app.get('/talker', (_req, res) => {
-  fs.readFile('./talker.json', 'utf8')
+  fs.readFile(talkerJson, 'utf8')
     .then((response) => res.status(200).json(JSON.parse(response)));
 });
 
 // Requisito 2
 app.get('/talker/:id', (req, res) => {
-  fs.readFile('./talker.json', 'utf8')
+  fs.readFile(talkerJson, 'utf8')
     .then((response) => {
       const { id } = req.params;
       const talkers = JSON.parse(response);
@@ -150,13 +151,13 @@ const checkDate = (req, res, next) => {
 const checkRate = (req, res, next) => {
   const { talk: { rate } } = req.body;
 
-  if (!rate || rate === '') {
+  if (rate <= 0 || rate >= 6) {
+    return res.status(400).json({ message: 'O campo "rate" deve ser um inteiro de 1 à 5' });
+  } if (!rate || rate === '') {
     return res.status(400).json({
       message: 'O campo "talk" é obrigatório e "watchedAt" e "rate" não podem ser vazios',
     });
-  } if (rate < 1 || rate > 5) {
-    return res.status(400).json({ message: 'O campo "rate" deve ser um inteiro de 1 à 5' });
-  }
+  } 
 
   next();
 };
@@ -182,7 +183,7 @@ app.post('/talker',
   checkRate,
   async (req, res) => {
     const { name, age, talk: { watchedAt, rate } } = req.body;
-    const talkers = await fs.readFile('./talker.json', 'utf8')
+    const talkers = await fs.readFile(talkerJson, 'utf8')
       .then((response) => JSON.parse(response));
 
     const newTalker = {
@@ -196,6 +197,27 @@ app.post('/talker',
     };
 
     talkers.push(newTalker);
-    await fs.writeFile('./talker.json', JSON.stringify(talkers));
+    await fs.writeFile(talkerJson, JSON.stringify(talkers));
     return res.status(201).json(newTalker);
+  });
+
+// Requisito 5
+app.put('/talker/:id',
+  checkToken,
+  checkName,
+  checkAge,
+  checkTalk,
+  checkDate,
+  checkRate,
+  async (req, res) => {
+    const { id } = req.params;
+    const { name, age, talk: { watchedAt, rate } } = req.body;
+    const talkers = await fs.readFile(talkerJson, 'utf8')
+      .then((response) => JSON.parse(response));
+
+    const newTalker = { id, name, age, talk: { watchedAt, rate } };
+    talkers.splice(id - 1, 1, newTalker);
+
+    await fs.writeFile(talkerJson, JSON.stringify(talkers));
+    return res.status(200).json(newTalker);
   });
