@@ -221,3 +221,14 @@ app.put('/talker/:id',
     await fs.writeFile(talkerJson, JSON.stringify(talkers));
     return res.status(200).json(newTalker);
   });
+
+// Requisito 6
+app.delete('/talker/:id', checkToken, async (req, res) => {
+    const { id } = req.params;
+    const talkers = await fs.readFile(talkerJson, 'utf8')
+      .then((response) => JSON.parse(response));
+
+    talkers.splice(id - 1, 1);
+    await fs.writeFile(talkerJson, JSON.stringify(talkers));
+    return res.status(204).end();
+  });
