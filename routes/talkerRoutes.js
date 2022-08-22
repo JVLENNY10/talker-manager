@@ -39,7 +39,8 @@ route.get('/talker/:id', (req, res) => {
   });
 });
 
-route.post('/talker',
+route.post(
+  '/talker',
   checkToken,
   checkName,
   checkAge,
@@ -64,7 +65,8 @@ route.post('/talker',
     await fs.writeFile(talkerJson, JSON.stringify(talkers));
 
     return res.status(201).json(newTalker);
-  });
+  },
+);
 
 route.put(
   '/talker/:id',
